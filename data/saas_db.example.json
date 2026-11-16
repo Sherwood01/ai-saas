@@ -1,0 +1,17 @@
+{
+  "users": {
+    "default_user": {
+      "id": "default_user",
+      "email": "user@example.com",
+      "displayName": "English Creator",
+      "planType": "free",
+      "subscriptionStatus": "active",
+      "currentPeriodEnd": "2027-01-01T00:00:00.000Z",
+      "monthlyUsageCount": 0,
+      "monthlyUsageLimit": 5,
+      "createdAt": "2026-11-16T00:00:00.000Z"
+    }
+  },
+  "videos": {},
+  "tasks": {}
+}

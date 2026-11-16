@@ -1,0 +1,117 @@
+import fs from "fs";
+import path from "path";
+import { pipeline } from "stream/promises";
+import { Readable } from "stream";
+import { WorkerRenderPayload, WorkerTaskStatusResponse, PipelineType } from "./worker-types";
+import { getWorkerEndpoint } from "./tools-registry";
+
+const STORAGE_VIDEOS_DIR = path.join(process.cwd(), "storage", "videos");
+
+// 确保 ai-saas 本地存储目录存在
+if (!fs.existsSync(STORAGE_VIDEOS_DIR)) {
+  fs.mkdirSync(STORAGE_VIDEOS_DIR, { recursive: true });
+}
+
+export class WorkerClient {
+  /**
+   * 根据业务类型获取对应的 Worker 服务节点地址 (基于统一注册表)
+   */
+  static getWorkerEndpoint(pipelineType: PipelineType = "vocab-shorts"): string {
+    return getWorkerEndpoint(pipelineType);
+  }
+
+  /**
+   * 1. 向指定的 Worker 节点派发标准视频渲染任务 (POST /api/worker/render)
+   */
+  static async dispatchTask(payload: WorkerRenderPayload): Promise<{
+    success: boolean;
+    workerUrl: string;
+    data?: WorkerTaskStatusResponse;
+    error?: string;
+  }> {
+    const workerUrl = this.getWorkerEndpoint(payload.pipelineType);
+
+    try {
+      const resp = await fetch(`${workerUrl}/api/worker/render`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        body: JSON.stringify(payload),
+        signal: AbortSignal.timeout(8000),
+      });
+
+      if (!resp.ok) {
+        const errText = await resp.text();
+        return {
+          success: false,
+          workerUrl,
+          error: `Worker returned error: ${resp.status} - ${errText}`,
+        };
+      }
+
+      const data = (await resp.json()) as WorkerTaskStatusResponse;
+      return { success: true, workerUrl, data };
+    } catch (err: any) {
+      console.warn(`[Worker Dispatch Notice] Failed to connect to worker at ${workerUrl}: ${err.message}`);
+      return {
+        success: false,
+        workerUrl,
+        error: `Could not connect to Worker service: ${err.message}`,
+      };
+    }
+  }
+
+  /**
+   * 2. 向 Worker 节点轮询或同步任务最新进度 (GET /api/worker/status/:taskId)
+   */
+  static async queryTaskStatus(
+    taskId: string,
+    workerUrl: string = getWorkerEndpoint()
+  ): Promise<WorkerTaskStatusResponse | null> {
+    try {
+      const resp = await fetch(`${workerUrl}/api/worker/status/${encodeURIComponent(taskId)}`, {
+        headers: { Accept: "application/json" },
+        signal: AbortSignal.timeout(4000),
+      });
+
+      if (!resp.ok) return null;
+      return (await resp.json()) as WorkerTaskStatusResponse;
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * 3. 核心流式传输：当 Worker 渲染完成后，将成品 MP4 流式拉取并落盘存储至 ai-saas/storage/videos/
+   * 彻底解除 Worker 端的持久存储压力
+   */
+  static async syncVideoToStorage(downloadPathOrUrl: string, targetFilename: string): Promise<string | null> {
+    const workerUrl = this.getWorkerEndpoint();
+    const remoteUrl = downloadPathOrUrl.startsWith("http")
+      ? downloadPathOrUrl
+      : `${workerUrl}${downloadPathOrUrl}`;
+    const localDest = path.join(STORAGE_VIDEOS_DIR, targetFilename);
+
+    try {
+      console.log(`[Storage Sync] Downloading finished video from ${remoteUrl} to ${localDest}...`);
+      const resp = await fetch(remoteUrl);
+      if (!resp.ok || !resp.body) {
+        console.error(`[Storage Sync] Failed to download video: ${resp.status}`);
+        return null;
+      }
+
+      // @ts-ignore Node Readable stream pipeline
+      const nodeStream = Readable.fromWeb(resp.body);
+      const fileWriteStream = fs.createWriteStream(localDest);
+      await pipeline(nodeStream, fileWriteStream);
+
+      console.log(`[Storage Sync] Video successfully saved into ai-saas storage: ${targetFilename}`);
+      return `/api/video-file/${encodeURIComponent(targetFilename)}`;
+    } catch (err: any) {
+      console.error("[Storage Sync Exception]", err);
+      return null;
+    }
+  }
+}

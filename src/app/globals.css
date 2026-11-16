@@ -1,0 +1,50 @@
+@import "tailwindcss";
+
+/* 告诉 Tailwind v4：dark: 变体严格依据 .dark 类选择器生效，支持手动一键切换 */
+@custom-variant dark (&:where(.dark, .dark *));
+
+@layer base {
+  :root {
+    --bg-main: #f1f5f9;
+    --text-main: #0f172a;
+    --surface: #ffffff;
+    --border-color: #cbd5e1;
+    --brand-primary: #1e3a8a;
+  }
+
+  .dark {
+    --bg-main: #0a0f1d;
+    --text-main: #f8fafc;
+    --surface: #101828;
+    --border-color: #1e293b;
+    --brand-primary: #1e40af;
+  }
+
+  html {
+    font-size: 17px;
+  }
+
+  body {
+    background-color: var(--bg-main);
+    color: var(--text-main);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    letter-spacing: -0.015em;
+    transition: background-color 0.15s ease, color 0.15s ease;
+  }
+
+  /* 严肃政企深海藏青精致细滚动条 */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: rgba(100, 116, 139, 0.4);
+    border-radius: 9999px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgba(71, 85, 105, 0.7);
+  }
+}

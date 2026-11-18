@@ -47,13 +47,14 @@ export async function GET(
 
     // 普通直接下载传输
     const fileStream = fs.createReadStream(filePath);
+    const encodedName = encodeURIComponent(decodedName);
     // @ts-ignore
     return new Response(fileStream, {
       status: 200,
       headers: {
         "Content-Length": fileSize.toString(),
         "Content-Type": "video/mp4",
-        "Content-Disposition": `attachment; filename="${decodedName}"`,
+        "Content-Disposition": `attachment; filename="${encodedName}"; filename*=UTF-8''${encodedName}`,
       },
     });
   } catch (err: any) {

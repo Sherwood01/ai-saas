@@ -24,18 +24,19 @@ export async function GET(
       return NextResponse.json({ error: "Task not found" }, { status: 404 });
     }
 
-    // 1. 如果任务还在运行中，或者虽已标记完成但尚未流式转存视频 (缺少 videoUrl)，则向底层 Worker 查询并补充转存
+    // 1. 如果任务还在运行中，或者虽已标记完成但尚未流式转存视频 (缺少 videoUrl)，则向底层对应 Worker 查询并补充转存
     const needsSync = task.status === "running" || task.status === "queued" || (task.status === "completed" && !task.videoUrl);
     if (needsSync) {
-      const workerStatus = await WorkerClient.queryTaskStatus(taskId);
+      const pipelineType = task.pipelineType || "vocab-shorts";
+      const workerStatus = await WorkerClient.queryTaskStatus(taskId, pipelineType);
       if (workerStatus) {
         // 如果底层 Worker 已经渲染完成 (completed)
         if (workerStatus.status === "completed" && (workerStatus.downloadUrl || workerStatus.videoUrl)) {
           const downloadUrl = workerStatus.downloadUrl || workerStatus.videoUrl || "";
           const targetFilename = `${task.word}-${task.id}.mp4`;
 
-          // 将视频从底层 Worker 流式拉取并转存到 ai-saas/storage/videos/
-          const saasVideoUrl = await WorkerClient.syncVideoToStorage(downloadUrl, targetFilename);
+          // 将视频从底层对应 Worker 流式拉取并转存到 ai-saas/storage/videos/
+          const saasVideoUrl = await WorkerClient.syncVideoToStorage(downloadUrl, targetFilename, pipelineType);
 
           const finalTask = updateVideoTaskStatus(taskId, {
             status: "completed",

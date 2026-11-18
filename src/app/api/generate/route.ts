@@ -22,7 +22,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Word parameter is required." }, { status: 400 });
     }
 
-    const cleanWord = word.trim().toLowerCase().replace(/[^a-z0-9_-]/gi, "");
+    // 支持中文知识产权词汇（如"商业秘密"）及英文词汇
+    const cleanWord =
+      pipelineType === "ip-explainer"
+        ? word.trim().replace(/[^\u4e00-\u9fa5a-zA-Z0-9_\-\s]/g, "")
+        : word.trim().toLowerCase().replace(/[^a-z0-9_-]/gi, "");
+
     if (!cleanWord) {
       return NextResponse.json({ error: "Invalid word provided." }, { status: 400 });
     }
@@ -70,7 +75,7 @@ export async function POST(req: NextRequest) {
       if (workerTask.status === "completed" && (workerTask.downloadUrl || workerTask.videoUrl)) {
         const downloadUrl = workerTask.downloadUrl || workerTask.videoUrl || "";
         const targetFilename = `${cleanWord}-${taskId}.mp4`;
-        const saasVideoUrl = await WorkerClient.syncVideoToStorage(downloadUrl, targetFilename);
+        const saasVideoUrl = await WorkerClient.syncVideoToStorage(downloadUrl, targetFilename, workerDispatch.workerUrl);
 
         const completedTask = updateVideoTaskStatus(taskId, {
           status: "completed",

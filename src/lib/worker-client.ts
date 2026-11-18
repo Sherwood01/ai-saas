@@ -68,8 +68,12 @@ export class WorkerClient {
    */
   static async queryTaskStatus(
     taskId: string,
-    workerUrl: string = getWorkerEndpoint()
+    workerUrlOrPipeline: string | PipelineType = "vocab-shorts"
   ): Promise<WorkerTaskStatusResponse | null> {
+    const workerUrl = workerUrlOrPipeline.startsWith("http")
+      ? workerUrlOrPipeline
+      : this.getWorkerEndpoint(workerUrlOrPipeline as PipelineType);
+
     try {
       const resp = await fetch(`${workerUrl}/api/worker/status/${encodeURIComponent(taskId)}`, {
         headers: { Accept: "application/json" },
@@ -87,11 +91,20 @@ export class WorkerClient {
    * 3. 核心流式传输：当 Worker 渲染完成后，将成品 MP4 流式拉取并落盘存储至 ai-saas/storage/videos/
    * 彻底解除 Worker 端的持久存储压力
    */
-  static async syncVideoToStorage(downloadPathOrUrl: string, targetFilename: string): Promise<string | null> {
-    const workerUrl = this.getWorkerEndpoint();
+  static async syncVideoToStorage(
+    downloadPathOrUrl: string, 
+    targetFilename: string,
+    workerUrlOrPipeline?: string | PipelineType
+  ): Promise<string | null> {
+    const baseWorkerUrl = !workerUrlOrPipeline
+      ? this.getWorkerEndpoint()
+      : workerUrlOrPipeline.startsWith("http")
+      ? workerUrlOrPipeline
+      : this.getWorkerEndpoint(workerUrlOrPipeline as PipelineType);
+
     const remoteUrl = downloadPathOrUrl.startsWith("http")
       ? downloadPathOrUrl
-      : `${workerUrl}${downloadPathOrUrl}`;
+      : `${baseWorkerUrl}${downloadPathOrUrl}`;
     const localDest = path.join(STORAGE_VIDEOS_DIR, targetFilename);
 
     try {

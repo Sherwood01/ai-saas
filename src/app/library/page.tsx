@@ -20,7 +20,8 @@ import {
   ShieldCheck,
   X,
   Layers,
-  Mic
+  Mic,
+  Scale
 } from "lucide-react";
 import { VideoItem } from "@/lib/types";
 
@@ -95,6 +96,7 @@ export default function LibraryPage() {
     const counts = {
       all: videos.length,
       "vocab-shorts": 0,
+      "ip-explainer": 0,
       "story-adventure": 0,
       voiceover: 0,
     };
@@ -192,6 +194,26 @@ export default function LibraryPage() {
               : "bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300"
           }`}>
             {pipelineCounts["vocab-shorts"]}
+          </span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setSelectedPipeline("ip-explainer")}
+          className={`flex items-center gap-2 px-3.5 py-1.5 rounded-md text-sm font-semibold transition shrink-0 ${
+            selectedPipeline === "ip-explainer"
+              ? "bg-[#1e3a8a] dark:bg-[#1e40af] text-white shadow-xs"
+              : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700 hover:border-slate-400"
+          }`}
+        >
+          <Scale className="h-4 w-4 text-amber-500" />
+          <span>IP Video</span>
+          <span className={`text-xs px-2 py-0.5 rounded font-mono ${
+            selectedPipeline === "ip-explainer"
+              ? "bg-[#172554] text-white"
+              : "bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300"
+          }`}>
+            {pipelineCounts["ip-explainer"]}
           </span>
         </button>
 
@@ -347,7 +369,9 @@ export default function LibraryPage() {
                           <div className="font-bold text-slate-900 dark:text-white capitalize text-sm group-hover:text-[#1e3a8a] dark:group-hover:text-[#93c5fd] transition flex items-center gap-2">
                             <span>{item.word}</span>
                             <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700">
-                              {item.pipelineType === "story-adventure"
+                              {item.pipelineType === "ip-explainer"
+                                ? "IP Video"
+                                : item.pipelineType === "story-adventure"
                                 ? "Story"
                                 : item.pipelineType === "voiceover"
                                 ? "Voiceover"
@@ -447,7 +471,13 @@ export default function LibraryPage() {
                 {/* 顶部比例与大小徽章 */}
                 <div className="absolute top-2.5 left-2.5 right-2.5 flex items-center justify-between text-[10px] font-bold z-10">
                   <span className="px-2 py-0.5 rounded bg-[#1e3a8a] text-white uppercase tracking-wider flex items-center gap-1 shadow-xs">
-                    <span>{item.pipelineType === "story-adventure" ? "Story" : "Vocab"}</span>
+                    <span>
+                      {item.pipelineType === "ip-explainer" 
+                        ? "IP" 
+                        : item.pipelineType === "story-adventure" 
+                        ? "Story" 
+                        : "Vocab"}
+                    </span>
                     <span>•</span>
                     <span>{item.resolution || "1080p"}</span>
                   </span>

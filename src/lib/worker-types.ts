@@ -3,7 +3,7 @@
  * 任何后端视频生成引擎（如 词汇短视频、YouTube探险视频、企业新闻视频）均遵循此标准契约
  */
 
-export type PipelineType = "vocab-shorts" | "story-adventure" | "voiceover" | "custom";
+export type PipelineType = "vocab-shorts" | "ip-explainer" | "story-adventure" | "voiceover" | "custom";
 
 /**
  * 派发给 Worker 的标准渲染请求体

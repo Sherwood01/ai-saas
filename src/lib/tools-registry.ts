@@ -23,6 +23,20 @@ export interface AIToolConfig {
  * 集中管理各微服务算力节点通信端点、计费成本与资产归档策略
  */
 export const AI_TOOLS_REGISTRY: Record<PipelineType, AIToolConfig> = {
+  "ip-explainer": {
+    id: "ip-explainer",
+    name: "IP Doodle Video Studio",
+    shortName: "IP Video",
+    description: "Automated hand-drawn doodle explainer videos for patents, trademarks & commercial battles.",
+    category: "video",
+    creditCost: 2,
+    workerEnvKey: "IP_WORKER_URL",
+    defaultEndpoint: "http://localhost:4990",
+    status: "active",
+    badgeText: "New",
+    resolution: "1080p (16:9)",
+    storageSubdir: "ip-explainer",
+  },
   "vocab-shorts": {
     id: "vocab-shorts",
     name: "Vocabulary Shorts Studio",
@@ -31,7 +45,7 @@ export const AI_TOOLS_REGISTRY: Record<PipelineType, AIToolConfig> = {
     category: "video",
     creditCost: 1,
     workerEnvKey: "VOCAB_WORKER_URL",
-    defaultEndpoint: "http://localhost:5100",
+    defaultEndpoint: "http://localhost:4980",
     status: "active",
     badgeText: "Active",
     resolution: "1080p (9:16)",

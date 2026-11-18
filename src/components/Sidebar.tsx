@@ -125,18 +125,18 @@ export function Sidebar({ onCloseMobile }: SidebarProps) {
               </span>
             </Link>
 
-            {/* Tool 2: Story & Adventure (Beta) */}
+            {/* Tool 2: IP Doodle Video (Active) */}
             <Link
-              href="/tools/story-adventure"
+              href="/tools/ip-explainer"
               onClick={onCloseMobile}
-              className={navItemClass(pathname.startsWith("/tools/story-adventure"))}
+              className={navItemClass(pathname.startsWith("/tools/ip-explainer"))}
             >
               <div className="flex items-center gap-2.5">
-                <Video className="h-4 w-4 text-slate-400" />
-                <span>Story & Adventure</span>
+                <Video className="h-4 w-4 text-amber-500" />
+                <span>IP Video Studio</span>
               </div>
-              <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 uppercase">
-                Beta
+              <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 border border-amber-200/60 dark:border-amber-800/60 uppercase">
+                Active
               </span>
             </Link>
 

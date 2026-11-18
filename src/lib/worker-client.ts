@@ -127,4 +127,35 @@ export class WorkerClient {
       return null;
     }
   }
+
+  /**
+   * 4. 向对应 Worker 节点发送彻底清理指令 (POST /api/worker/cleanup)
+   * 彻底清除该视频在 Worker 端产生的所有中间渲染缓存、草稿 JSON、动态 Remotion 组件及音频目录
+   */
+  static async cleanupTask(
+    taskId: string,
+    word: string,
+    pipelineType: PipelineType = "vocab-shorts"
+  ): Promise<{ success: boolean; deletedFiles?: string[]; error?: string }> {
+    const workerUrl = this.getWorkerEndpoint(pipelineType);
+
+    try {
+      const resp = await fetch(`${workerUrl}/api/worker/cleanup`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ taskId, word }),
+        signal: AbortSignal.timeout(6000),
+      });
+
+      if (!resp.ok) {
+        return { success: false, error: `Worker cleanup returned HTTP ${resp.status}` };
+      }
+
+      const data = await resp.json();
+      return { success: true, deletedFiles: data.deletedFiles };
+    } catch (err: any) {
+      console.warn(`[Worker Cleanup Notice] Failed to call cleanup on ${workerUrl}: ${err.message}`);
+      return { success: false, error: err.message };
+    }
+  }
 }

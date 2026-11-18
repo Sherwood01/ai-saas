@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import path from "path";
 import fs from "fs";
-import { getUserVideos } from "@/lib/db";
+import { getUserVideos, deleteVideoTask } from "@/lib/db";
 import { getSessionUser } from "@/lib/auth";
+import { WorkerClient } from "@/lib/worker-client";
 
 // 本地视频存储目录
 const STORAGE_VIDEOS_DIR = path.join(process.cwd(), "storage", "videos");
@@ -69,6 +70,73 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json(enrichedVideos);
   } catch (err: any) {
+    return NextResponse.json({ error: err.message }, { status: 500 });
+  }
+}
+
+/**
+ * 彻底级联删除视频资产及其底层算力 Worker 全量过程文件
+ * 1. 验证用户权限 -> 2. 从本地 DB 移除记录 -> 3. 物理删除 SaaS storage/videos 成品 MP4 -> 4. RPC 联动对应 Worker 清理全部过程文件
+ */
+export async function DELETE(req: NextRequest) {
+  try {
+    const user = await getSessionUser();
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { searchParams } = new URL(req.url);
+    const taskId = searchParams.get("id");
+
+    if (!taskId) {
+      return NextResponse.json({ error: "Task ID parameter is required." }, { status: 400 });
+    }
+
+    // 1. 从本地 DB 查找并删除任务（带所有权校验）
+    const deletedTask = deleteVideoTask(taskId, user.id);
+    if (!deletedTask) {
+      return NextResponse.json({ error: "Video task not found or unauthorized." }, { status: 404 });
+    }
+
+    // 2. 物理删除 SaaS storage/videos/ 中的成品文件
+    const url = deletedTask.downloadUrl || deletedTask.videoUrl || "";
+    const filenameCandidates: string[] = [
+      `${deletedTask.word}-${deletedTask.id}.mp4`,
+    ];
+    if (url) {
+      const parts = url.split("/");
+      const rawName = decodeURIComponent(parts[parts.length - 1] || "");
+      if (rawName && !filenameCandidates.includes(rawName)) {
+        filenameCandidates.push(rawName);
+      }
+    }
+
+    const localDeleted: string[] = [];
+    for (const name of filenameCandidates) {
+      const filePath = path.join(STORAGE_VIDEOS_DIR, name);
+      if (fs.existsSync(filePath)) {
+        try {
+          fs.unlinkSync(filePath);
+          localDeleted.push(name);
+        } catch (err: any) {
+          console.warn(`[Storage Delete Warning] Could not delete ${name}: ${err.message}`);
+        }
+      }
+    }
+
+    // 3. 跨微服务联动对应 Worker 节点彻底清理过程文件（草稿 JSON、TSX、TTS音频、renders缓存）
+    const pipelineType = deletedTask.pipelineType || "vocab-shorts";
+    const workerCleanup = await WorkerClient.cleanupTask(deletedTask.id, deletedTask.word, pipelineType);
+
+    return NextResponse.json({
+      success: true,
+      message: `Video "${deletedTask.word}" and all associated artifacts purged successfully.`,
+      deletedTaskId: taskId,
+      localDeleted,
+      workerDeleted: workerCleanup.deletedFiles || [],
+    });
+  } catch (err: any) {
+    console.error("[Delete Video Exception]", err);
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }

@@ -21,7 +21,9 @@ import {
   X,
   Layers,
   Mic,
-  Scale
+  Scale,
+  Trash2,
+  AlertCircle
 } from "lucide-react";
 import { VideoItem } from "@/lib/types";
 
@@ -43,10 +45,16 @@ export default function LibraryPage() {
   const [searchQuery, setSearchQuery] = useState("");
   // 视图模式：默认 "list"（表格列表），可选 "grid"（紧凑网格）
   const [viewMode, setViewMode] = useState<"list" | "grid">("list");
-  // 当前分类筛选：all | vocab-shorts | story-adventure | voiceover
+  // 当前分类筛选：all | vocab-shorts | ip-explainer | story-adventure | voiceover
   const [selectedPipeline, setSelectedPipeline] = useState<string>("all");
   // 当前选中的播放视频
   const [selectedVideo, setSelectedVideo] = useState<VideoItem | null>(null);
+
+  // 删除功能状态
+  const [videoToDelete, setVideoToDelete] = useState<VideoItem | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [deleteSuccessMsg, setDeleteSuccessMsg] = useState<string | null>(null);
 
   useEffect(() => {
     fetchLibraryVideos();
@@ -64,6 +72,38 @@ export default function LibraryPage() {
       console.error("Failed to fetch library videos:", err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  /**
+   * 彻底删除视频资产及其底层算力 Worker 全量过程文件
+   */
+  const handleDeleteVideo = async (item: VideoItem) => {
+    try {
+      setDeletingId(item.id);
+      setDeleteError(null);
+
+      const res = await fetch(`/api/videos?id=${encodeURIComponent(item.id)}`, {
+        method: "DELETE",
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to delete video.");
+      }
+
+      // 乐观更新：从当前列表中剔除该视频
+      setVideos((prev) => prev.filter((v) => v.id !== item.id));
+      if (selectedVideo?.id === item.id) {
+        setSelectedVideo(null);
+      }
+      setVideoToDelete(null);
+      setDeleteSuccessMsg(`Video "${item.word}" and all associated files purged successfully.`);
+      setTimeout(() => setDeleteSuccessMsg(null), 4000);
+    } catch (err: any) {
+      setDeleteError(err.message || "An unexpected error occurred during deletion.");
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -258,6 +298,20 @@ export default function LibraryPage() {
         </button>
       </div>
 
+      {/* ── Delete Success Alert ── */}
+      {deleteSuccessMsg && (
+        <div className="mb-4 p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 dark:text-emerald-400 text-xs font-semibold flex items-center justify-between shadow-xs">
+          <span>{deleteSuccessMsg}</span>
+          <button
+            type="button"
+            onClick={() => setDeleteSuccessMsg(null)}
+            className="text-emerald-600 dark:text-emerald-400 hover:opacity-80 p-0.5"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      )}
+
       {/* ── Search & Filter Bar ── */}
       <div className="p-3 mb-6 rounded-lg bg-white dark:bg-[#101828] border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         {/* Search Input */}
@@ -442,6 +496,15 @@ export default function LibraryPage() {
                         >
                           <Download className="h-4 w-4" />
                         </a>
+
+                        <button
+                          type="button"
+                          onClick={() => setVideoToDelete(item)}
+                          title="Delete video and all artifacts"
+                          className="p-1.5 rounded-md bg-slate-100 dark:bg-slate-800 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/30 dark:hover:text-red-400 text-slate-400 border border-slate-200 dark:border-slate-700 transition"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -512,14 +575,25 @@ export default function LibraryPage() {
                   )}
                 </div>
 
-                <a
-                  href={item.downloadUrl || item.playUrl || item.videoUrl || ""}
-                  download
-                  title="Download MP4 Video"
-                  className="p-1.5 rounded bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:text-[#1e3a8a] dark:hover:text-[#93c5fd] hover:border-slate-400 transition"
-                >
-                  <Download className="h-4 w-4" />
-                </a>
+                <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+                  <a
+                    href={item.downloadUrl || item.playUrl || item.videoUrl || ""}
+                    download
+                    title="Download MP4 Video"
+                    className="p-1.5 rounded bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:text-[#1e3a8a] dark:hover:text-[#93c5fd] hover:border-slate-400 transition"
+                  >
+                    <Download className="h-4 w-4" />
+                  </a>
+
+                  <button
+                    type="button"
+                    onClick={() => setVideoToDelete(item)}
+                    title="Delete video and all artifacts"
+                    className="p-1.5 rounded bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:border-red-300 dark:hover:border-red-900 transition"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
               </div>
             </div>
           ))}
@@ -572,6 +646,104 @@ export default function LibraryPage() {
                 <Download className="h-4 w-4" />
                 <span>Download MP4 ({selectedVideo.fileSize || "HD"})</span>
               </a>
+              <button
+                type="button"
+                onClick={() => setVideoToDelete(selectedVideo)}
+                title="Delete this video"
+                className="px-3.5 py-2.5 rounded bg-red-50 hover:bg-red-100 dark:bg-red-950/40 dark:hover:bg-red-900/40 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-900/60 font-semibold text-sm transition flex items-center justify-center"
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Cascade Delete Confirmation Modal (级联物理删除二次确认弹窗) ── */}
+      {videoToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-xs p-4">
+          <div className="relative w-full max-w-md rounded-xl bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 p-6 shadow-2xl flex flex-col">
+            <div className="flex items-start gap-3.5">
+              <div className="p-2.5 rounded-full bg-red-100 dark:bg-red-950/60 text-red-600 dark:text-red-400 shrink-0">
+                <Trash2 className="h-6 w-6" />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-lg font-bold text-slate-900 dark:text-white">
+                  Delete Video & Artifacts?
+                </h3>
+                <p className="mt-1 text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                  Are you sure you want to permanently delete{" "}
+                  <span className="font-semibold text-slate-900 dark:text-slate-200">
+                    "{videoToDelete.word}"
+                  </span>
+                  ?
+                </p>
+              </div>
+              <button
+                type="button"
+                disabled={deletingId === videoToDelete.id}
+                onClick={() => {
+                  setVideoToDelete(null);
+                  setDeleteError(null);
+                }}
+                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="my-4 rounded-lg bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800/80 p-3 text-xs space-y-1.5 text-slate-600 dark:text-slate-300">
+              <div className="font-medium text-slate-700 dark:text-slate-200">
+                This action will permanently purge:
+              </div>
+              <ul className="list-disc list-inside space-y-1 text-[11px] text-slate-500 dark:text-slate-400">
+                <li>Local MP4 video in cloud storage</li>
+                <li>Worker intermediate render files & drafts</li>
+                <li>Worker Remotion TSX code & audio clips</li>
+                <li>Database task and metadata record</li>
+              </ul>
+              <div className="pt-1 text-[11px] text-red-500 font-medium">
+                This action cannot be undone.
+              </div>
+            </div>
+
+            {deleteError && (
+              <div className="mb-4 p-2.5 rounded-lg bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900/60 text-xs text-red-700 dark:text-red-300 flex items-center gap-2">
+                <AlertCircle className="h-4 w-4 shrink-0" />
+                <span>{deleteError}</span>
+              </div>
+            )}
+
+            <div className="flex items-center justify-end gap-2.5 mt-2">
+              <button
+                type="button"
+                disabled={deletingId === videoToDelete.id}
+                onClick={() => {
+                  setVideoToDelete(null);
+                  setDeleteError(null);
+                }}
+                className="px-4 py-2 rounded-lg text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={deletingId === videoToDelete.id}
+                onClick={() => handleDeleteVideo(videoToDelete)}
+                className="px-4 py-2 rounded-lg text-xs font-semibold bg-red-600 hover:bg-red-700 text-white transition flex items-center gap-1.5 shadow-xs disabled:opacity-60"
+              >
+                {deletingId === videoToDelete.id ? (
+                  <>
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    <span>Purging...</span>
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="h-3.5 w-3.5" />
+                    <span>Confirm Delete</span>
+                  </>
+                )}
+              </button>
             </div>
           </div>
         </div>

@@ -340,3 +340,22 @@ export function getUserVideos(userId: string): VideoItem[] {
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 }
 
+/**
+ * 删除指定用户的视频任务记录（严格所有权校验）
+ */
+export function deleteVideoTask(taskId: string, userId: string): VideoItem | null {
+  const db = readDb();
+  const task = db.videos[taskId];
+  if (!task) return null;
+
+  // 严格安全校验：只允许本人删除
+  if (task.userId !== userId) {
+    console.warn(`[DB Security] User ${userId} attempted to delete task ${taskId} owned by ${task.userId}`);
+    return null;
+  }
+
+  delete db.videos[taskId];
+  writeDb(db);
+  return task;
+}
+

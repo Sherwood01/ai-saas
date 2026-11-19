@@ -15,6 +15,8 @@ import {
   Layers
 } from "lucide-react";
 import { UserProfile } from "@/lib/types";
+import { useLanguage } from "./LanguageProvider";
+import { useAuth } from "./AuthProvider";
 
 interface SidebarProps {
   onCloseMobile?: () => void;
@@ -26,22 +28,8 @@ interface SidebarProps {
  */
 export function Sidebar({ onCloseMobile }: SidebarProps) {
   const pathname = usePathname();
-  const [user, setUser] = useState<UserProfile | null>(null);
-  const [remainingQuota, setRemainingQuota] = useState<number>(0);
-  const [isUnlimited, setIsUnlimited] = useState<boolean>(false);
-
-  useEffect(() => {
-    fetch("/api/auth/me")
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.user) {
-          setUser(data.user);
-          setRemainingQuota(data.remaining);
-          setIsUnlimited(data.isUnlimited);
-        }
-      })
-      .catch(() => {});
-  }, [pathname]);
+  const { t, locale } = useLanguage();
+  const { user, remainingQuota, isUnlimited } = useAuth();
 
   const navItemClass = (isActive: boolean) =>
     `flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-semibold transition-all group ${
@@ -77,7 +65,7 @@ export function Sidebar({ onCloseMobile }: SidebarProps) {
         {/* 1. General Overview Group */}
         <div>
           <h4 className="px-3 text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">
-            Overview
+            {locale === "zh" ? "核心概览" : "Overview"}
           </h4>
           <nav className="space-y-1">
             <Link
@@ -87,7 +75,7 @@ export function Sidebar({ onCloseMobile }: SidebarProps) {
             >
               <div className="flex items-center gap-2.5">
                 <LayoutDashboard className="h-4 w-4" />
-                <span>Dashboard</span>
+                <span>{t.navDashboard}</span>
               </div>
             </Link>
 
@@ -98,7 +86,7 @@ export function Sidebar({ onCloseMobile }: SidebarProps) {
             >
               <div className="flex items-center gap-2.5">
                 <Film className="h-4 w-4" />
-                <span>Asset Library</span>
+                <span>{t.navLibrary}</span>
               </div>
             </Link>
           </nav>
@@ -107,7 +95,7 @@ export function Sidebar({ onCloseMobile }: SidebarProps) {
         {/* 2. AI Studios Tools Group */}
         <div>
           <h4 className="px-3 text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">
-            AI Studios
+            {locale === "zh" ? "AI 创作工坊" : "AI Studios"}
           </h4>
           <nav className="space-y-1">
             {/* Tool 1: Vocabulary Shorts (Active) */}
@@ -118,10 +106,10 @@ export function Sidebar({ onCloseMobile }: SidebarProps) {
             >
               <div className="flex items-center gap-2.5">
                 <Film className="h-4 w-4" />
-                <span>Vocab Shorts</span>
+                <span>{t.toolsVocabShorts}</span>
               </div>
               <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 border border-emerald-200/60 dark:border-emerald-800/60 uppercase">
-                Ready
+                {locale === "zh" ? "已就绪" : "Ready"}
               </span>
             </Link>
 
@@ -133,10 +121,10 @@ export function Sidebar({ onCloseMobile }: SidebarProps) {
             >
               <div className="flex items-center gap-2.5">
                 <Video className="h-4 w-4 text-amber-500" />
-                <span>IP Video Studio</span>
+                <span>{t.toolsIpExplainer}</span>
               </div>
               <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 border border-amber-200/60 dark:border-amber-800/60 uppercase">
-                Active
+                {locale === "zh" ? "已就绪" : "Active"}
               </span>
             </Link>
 
@@ -148,10 +136,10 @@ export function Sidebar({ onCloseMobile }: SidebarProps) {
             >
               <div className="flex items-center gap-2.5">
                 <Mic className="h-4 w-4 text-slate-400" />
-                <span>Neural Voiceover</span>
+                <span>{locale === "zh" ? "AI 配音工作室" : "Neural Voiceover"}</span>
               </div>
               <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-400 uppercase">
-                Soon
+                {locale === "zh" ? "即将上线" : "Soon"}
               </span>
             </Link>
           </nav>
@@ -160,7 +148,7 @@ export function Sidebar({ onCloseMobile }: SidebarProps) {
         {/* 3. Account & Billing Group */}
         <div>
           <h4 className="px-3 text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">
-            Settings & Billing
+            {locale === "zh" ? "设置与订阅" : "Settings & Billing"}
           </h4>
           <nav className="space-y-1">
             <Link
@@ -170,7 +158,7 @@ export function Sidebar({ onCloseMobile }: SidebarProps) {
             >
               <div className="flex items-center gap-2.5">
                 <CreditCard className="h-4 w-4" />
-                <span>Subscription & Plans</span>
+                <span>{t.navBilling}</span>
               </div>
             </Link>
           </nav>
@@ -191,7 +179,7 @@ export function Sidebar({ onCloseMobile }: SidebarProps) {
                 <span className="capitalize">{user.planType} Tier</span>
               </span>
               <span className="text-xs font-mono font-bold text-slate-900 dark:text-slate-100">
-                {isUnlimited ? "Unlimited" : `${remainingQuota} Credits`}
+                {isUnlimited ? t.unlimited : `${remainingQuota} ${locale === "zh" ? "次生成额度" : "Credits"}`}
               </span>
             </div>
 
@@ -210,7 +198,7 @@ export function Sidebar({ onCloseMobile }: SidebarProps) {
               onClick={onCloseMobile}
               className="w-full flex items-center justify-center gap-1 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:text-[#1e3a8a] dark:hover:text-[#93c5fd] py-1.5 rounded hover:bg-slate-50 dark:hover:bg-slate-800 transition"
             >
-              <span>Manage Subscription</span>
+              <span>{locale === "zh" ? "管理订阅计划" : "Manage Subscription"}</span>
               <ChevronRight className="h-3.5 w-3.5" />
             </Link>
           </div>

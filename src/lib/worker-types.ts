@@ -30,6 +30,7 @@ export interface WorkerTaskStatusResponse {
   status: "queued" | "running" | "completed" | "failed" | "cancelled";
   stage: string;
   progress: number; // 0 ~ 100
+  logs?: string[];
   videoUrl?: string | null;
   downloadUrl?: string | null;
   durationSeconds?: number | null;

@@ -10,17 +10,17 @@ interface ThemeContextType {
 }
 
 const ThemeContext = createContext<ThemeContextType>({
-  theme: "dark",
-  toggleTheme: () => {},
+  theme: "light",
+  toggleTheme: () => { },
 });
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setTheme] = useState<Theme>("dark");
+  const [theme, setTheme] = useState<Theme>("light");
 
   useEffect(() => {
-    // 客户端挂载时检查持久化偏好
+    // 客户端挂载时检查持久化偏好，默认使用明亮模式 (light)
     const saved = localStorage.getItem("vocabvids_theme") as Theme | null;
-    const initialTheme: Theme = saved === "light" || saved === "dark" ? saved : "dark";
+    const initialTheme: Theme = saved === "dark" ? "dark" : "light";
     setTheme(initialTheme);
     applyTheme(initialTheme);
   }, []);

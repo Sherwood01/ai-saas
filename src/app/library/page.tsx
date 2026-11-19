@@ -26,6 +26,7 @@ import {
   AlertCircle
 } from "lucide-react";
 import { VideoItem } from "@/lib/types";
+import { useLanguage } from "@/components/LanguageProvider";
 
 /**
  * 格式化 ISO 日期时间字符串
@@ -40,6 +41,7 @@ function formatDateTime(isoString: string): string {
 }
 
 export default function LibraryPage() {
+  const { t, locale } = useLanguage();
   const [videos, setVideos] = useState<VideoItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -207,7 +209,7 @@ export default function LibraryPage() {
           }`}
         >
           <Layers className="h-4 w-4" />
-          <span>All Services</span>
+          <span>{t.libFilterAll}</span>
           <span className={`text-xs px-2 py-0.5 rounded font-mono ${
             selectedPipeline === "all"
               ? "bg-[#172554] text-white"
@@ -227,7 +229,7 @@ export default function LibraryPage() {
           }`}
         >
           <Film className="h-4 w-4" />
-          <span>Vocab Shorts</span>
+          <span>{t.toolsVocabShorts}</span>
           <span className={`text-xs px-2 py-0.5 rounded font-mono ${
             selectedPipeline === "vocab-shorts"
               ? "bg-[#172554] text-white"
@@ -247,7 +249,7 @@ export default function LibraryPage() {
           }`}
         >
           <Scale className="h-4 w-4 text-amber-500" />
-          <span>IP Video</span>
+          <span>{t.toolsIpExplainer}</span>
           <span className={`text-xs px-2 py-0.5 rounded font-mono ${
             selectedPipeline === "ip-explainer"
               ? "bg-[#172554] text-white"
@@ -321,7 +323,7 @@ export default function LibraryPage() {
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search by vocabulary word or ID..."
+            placeholder={t.libSearchPlaceholder}
             className="w-full bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-700 rounded-md pl-9 pr-4 py-2.5 text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:border-[#1e3a8a] transition"
           />
         </div>
@@ -669,10 +671,10 @@ export default function LibraryPage() {
               </div>
               <div className="flex-1">
                 <h3 className="text-lg font-bold text-slate-900 dark:text-white">
-                  Delete Video & Artifacts?
+                  {t.libDeleteConfirmTitle}
                 </h3>
                 <p className="mt-1 text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-                  Are you sure you want to permanently delete{" "}
+                  {t.libDeleteConfirmDesc}{" "}
                   <span className="font-semibold text-slate-900 dark:text-slate-200">
                     "{videoToDelete.word}"
                   </span>
@@ -694,16 +696,16 @@ export default function LibraryPage() {
 
             <div className="my-4 rounded-lg bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800/80 p-3 text-xs space-y-1.5 text-slate-600 dark:text-slate-300">
               <div className="font-medium text-slate-700 dark:text-slate-200">
-                This action will permanently purge:
+                {t.libDeletePurgeNotice}
               </div>
               <ul className="list-disc list-inside space-y-1 text-[11px] text-slate-500 dark:text-slate-400">
-                <li>Local MP4 video in cloud storage</li>
-                <li>Worker intermediate render files & drafts</li>
-                <li>Worker Remotion TSX code & audio clips</li>
-                <li>Database task and metadata record</li>
+                <li>{t.libDeletePurge1}</li>
+                <li>{t.libDeletePurge2}</li>
+                <li>{t.libDeletePurge3}</li>
+                <li>{t.libDeletePurge4}</li>
               </ul>
               <div className="pt-1 text-[11px] text-red-500 font-medium">
-                This action cannot be undone.
+                {t.libDeleteCannotUndo}
               </div>
             </div>
 
@@ -724,7 +726,7 @@ export default function LibraryPage() {
                 }}
                 className="px-4 py-2 rounded-lg text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition disabled:opacity-50"
               >
-                Cancel
+                {t.cancel}
               </button>
               <button
                 type="button"
@@ -735,12 +737,12 @@ export default function LibraryPage() {
                 {deletingId === videoToDelete.id ? (
                   <>
                     <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    <span>Purging...</span>
+                    <span>{t.libDeletePurging}</span>
                   </>
                 ) : (
                   <>
                     <Trash2 className="h-3.5 w-3.5" />
-                    <span>Confirm Delete</span>
+                    <span>{locale === "zh" ? "确认彻底删除" : "Confirm Delete"}</span>
                   </>
                 )}
               </button>

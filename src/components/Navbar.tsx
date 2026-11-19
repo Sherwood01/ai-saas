@@ -12,53 +12,24 @@ import {
   Sun, 
   Moon, 
   LogOut, 
-  ChevronDown
+  ChevronDown,
+  Languages
 } from "lucide-react";
 import { useTheme } from "./ThemeProvider";
-
-interface CurrentUser {
-  id: string;
-  email: string;
-  displayName: string;
-  planType: string;
-  monthlyUsageCount: number;
-  monthlyUsageLimit: number;
-}
+import { useLanguage } from "./LanguageProvider";
+import { useAuth } from "./AuthProvider";
 
 export function Navbar() {
   const pathname = usePathname();
   const router = useRouter();
   const { theme, toggleTheme } = useTheme();
-
-  const [user, setUser] = useState<CurrentUser | null>(null);
-  const [loadingUser, setLoadingUser] = useState(true);
+  const { locale, toggleLanguage, t } = useLanguage();
+  const { user, loading: loadingUser, signOut } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
 
-  useEffect(() => {
-    // 获取当前登录用户状态
-    fetch("/api/auth/me")
-      .then((res) => res.json())
-      .then((data) => {
-        setUser(data.user || null);
-      })
-      .catch(() => {
-        setUser(null);
-      })
-      .finally(() => {
-        setLoadingUser(false);
-      });
-  }, [pathname]);
-
   const handleSignOut = async () => {
-    try {
-      await fetch("/api/auth/sign-out", { method: "POST" });
-      setUser(null);
-      setMenuOpen(false);
-      router.push("/");
-      router.refresh();
-    } catch (err) {
-      console.error("Failed to sign out:", err);
-    }
+    setMenuOpen(false);
+    await signOut();
   };
 
   const isUnlimited = user?.planType === "studio" || (user?.monthlyUsageLimit || 0) >= 999999;
@@ -87,7 +58,7 @@ export function Navbar() {
             }`}
           >
             <LayoutDashboard className="h-4 w-4" />
-            <span>Studio</span>
+            <span>{t.navDashboard}</span>
           </Link>
 
           <Link
@@ -99,14 +70,14 @@ export function Navbar() {
             }`}
           >
             <Film className="h-4 w-4" />
-            <span>Library</span>
+            <span>{t.navLibrary}</span>
           </Link>
 
           <Link
             href="/#pricing"
             className="flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-sm font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100/80 dark:hover:bg-slate-800/60 transition"
           >
-            <span>Pricing</span>
+            <span>{locale === "zh" ? "价格方案" : "Pricing"}</span>
           </Link>
 
           <Link
@@ -118,12 +89,22 @@ export function Navbar() {
             }`}
           >
             <CreditCard className="h-4 w-4" />
-            <span>Billing</span>
+            <span>{t.navBilling}</span>
           </Link>
         </nav>
 
         {/* Right Actions */}
         <div className="flex items-center gap-2 sm:gap-3">
+          {/* Language Switch Button (中 / EN) */}
+          <button
+            onClick={toggleLanguage}
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white bg-slate-100/80 dark:bg-slate-800/80 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 transition shadow-xs"
+            title={locale === "zh" ? "Switch to English" : "切换为简体中文"}
+          >
+            <Languages className="h-3.5 w-3.5 text-[#1e3a8a] dark:text-[#60a5fa]" />
+            <span>{locale === "zh" ? "EN" : "中"}</span>
+          </button>
+
           {/* Light / Dark Mode Toggle */}
           <button
             onClick={toggleTheme}
@@ -189,7 +170,7 @@ export function Navbar() {
                       className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/80 transition"
                     >
                       <LayoutDashboard className="h-4 w-4 text-slate-500 dark:text-slate-400" />
-                      <span>Studio Dashboard</span>
+                      <span>{t.navDashboard}</span>
                     </Link>
 
                     <Link
@@ -198,7 +179,7 @@ export function Navbar() {
                       className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/80 transition"
                     >
                       <Film className="h-4 w-4 text-slate-500 dark:text-slate-400" />
-                      <span>Video Library</span>
+                      <span>{t.navLibrary}</span>
                     </Link>
 
                     <Link
@@ -207,7 +188,7 @@ export function Navbar() {
                       className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/80 transition"
                     >
                       <CreditCard className="h-4 w-4 text-slate-500 dark:text-slate-400" />
-                      <span>Subscription & Billing</span>
+                      <span>{t.navBilling}</span>
                     </Link>
 
                     <div className="border-t border-slate-100 dark:border-slate-800 my-1" />
@@ -217,7 +198,7 @@ export function Navbar() {
                       className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20 transition text-left font-medium"
                     >
                       <LogOut className="h-4 w-4" />
-                      <span>Sign Out</span>
+                      <span>{t.signOut}</span>
                     </button>
                   </div>
                 )}
@@ -229,13 +210,13 @@ export function Navbar() {
                 href="/auth/sign-in"
                 className="px-3.5 py-1.5 rounded-lg text-sm font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition"
               >
-                Sign In
+                {t.signIn}
               </Link>
               <Link
                 href="/auth/sign-up"
                 className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-sm font-semibold bg-[#1e3a8a] hover:bg-[#172554] dark:bg-[#1e40af] dark:hover:bg-[#1e3a8a] text-white transition shadow-xs active:scale-95"
               >
-                <span>Get Started</span>
+                <span>{t.signUp}</span>
               </Link>
             </div>
           )}

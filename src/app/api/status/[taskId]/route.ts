@@ -57,7 +57,11 @@ export async function GET(
           progress: workerStatus.progress,
           error: workerStatus.error || null,
         });
-        if (updated) task = updated;
+        if (updated) {
+          task = { ...updated, logs: workerStatus.logs || [] };
+        } else {
+          task = { ...task, logs: workerStatus.logs || [] };
+        }
       }
     }
 

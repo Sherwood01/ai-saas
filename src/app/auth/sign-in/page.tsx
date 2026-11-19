@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState, Suspense } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Video, ArrowRight, Loader2, AlertCircle, Lock, Mail } from "lucide-react";
 
@@ -13,8 +13,14 @@ function SignInContent() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [redirecting, setRedirecting] = useState(false);
   const urlError = searchParams.get("error");
   const [error, setError] = useState<string | null>(urlError || null);
+
+  // 提前预加载目标页面代码，消除冷启动等待感
+  useEffect(() => {
+    router.prefetch(redirectUrl);
+  }, [router, redirectUrl]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -33,12 +39,21 @@ function SignInContent() {
         throw new Error(data.error || "Failed to sign in.");
       }
 
-      // 登录成功，跳转到控制台或指定重定向页面
+      // 登录成功即刻锁定按钮并显示跳转状态
+      setRedirecting(true);
+
+      // 优先使用 Next.js 客户端路由瞬间切换，免受外网热重载打断
       router.push(redirectUrl);
       router.refresh();
+
+      // 双保险硬跳转兜底
+      setTimeout(() => {
+        if (window.location.pathname !== redirectUrl) {
+          window.location.href = redirectUrl;
+        }
+      }, 1200);
     } catch (err: any) {
       setError(err.message || "An unexpected error occurred.");
-    } finally {
       setLoading(false);
     }
   };
@@ -178,10 +193,15 @@ function SignInContent() {
 
           <button
             type="submit"
-            disabled={loading}
+            disabled={loading || redirecting}
             className="w-full mt-2 flex items-center justify-center gap-2 bg-[#1e3a8a] hover:bg-[#172554] dark:bg-[#1e40af] text-white disabled:opacity-50 py-3 rounded-md font-semibold text-sm shadow-xs transition active:scale-95"
           >
-            {loading ? (
+            {redirecting ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                <span>Entering Workspace...</span>
+              </>
+            ) : loading ? (
               <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
               <>

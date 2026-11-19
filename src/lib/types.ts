@@ -33,6 +33,7 @@ export interface VideoItem {
   status: "queued" | "running" | "completed" | "failed" | "cancelled";
   stage?: string;
   progress: number;
+  logs?: string[];
   videoUrl?: string | null;
   playUrl?: string | null;
   downloadUrl?: string | null;

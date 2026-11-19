@@ -43,11 +43,16 @@ export async function POST(req: NextRequest) {
       },
     });
 
+    // 智能识别 Cloudflare Tunnel / 反向代理协议
+    const isHttps =
+      req.headers.get("x-forwarded-proto") === "https" ||
+      process.env.NODE_ENV === "production";
+
     response.cookies.set({
       name: SESSION_COOKIE_NAME,
       value: token,
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
+      secure: isHttps,
       sameSite: "lax",
       path: "/",
       maxAge: 14 * 24 * 3600,

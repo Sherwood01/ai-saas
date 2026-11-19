@@ -38,9 +38,8 @@ function SignUpContent() {
         throw new Error(data.error || "Failed to create account.");
       }
 
-      // 注册成功，直奔控制台
-      router.push(redirectUrl);
-      router.refresh();
+      // 注册成功，使用整页硬跳转进入控制台
+      window.location.href = redirectUrl;
     } catch (err: any) {
       setError(err.message || "An unexpected error occurred.");
     } finally {

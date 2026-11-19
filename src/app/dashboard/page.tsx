@@ -18,15 +18,16 @@ import {
   X
 } from "lucide-react";
 import { VideoItem, UserProfile } from "@/lib/types";
+import { useLanguage } from "@/components/LanguageProvider";
+import { useAuth } from "@/components/AuthProvider";
 
 /**
  * AI-SaaS 商业化总控仪表盘 (Palantir Prussian Navy & Slate)
  * 聚合全平台 Credits 额度水位、各 AI 算力工具快捷启动矩阵、最新作品点播与计算节点状态
  */
 function DashboardOverview() {
-  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
-  const [remainingQuota, setRemainingQuota] = useState<number>(0);
-  const [isUnlimited, setIsUnlimited] = useState<boolean>(false);
+  const { t, locale } = useLanguage();
+  const { user: userProfile, remainingQuota, isUnlimited, loading: authLoading } = useAuth();
 
   // 最近作品
   const [recentVideos, setRecentVideos] = useState<VideoItem[]>([]);
@@ -36,19 +37,13 @@ function DashboardOverview() {
   const [selectedVideo, setSelectedVideo] = useState<VideoItem | null>(null);
 
   useEffect(() => {
-    // 1. 获取用户信息与额度
-    fetch("/api/auth/me")
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.user) {
-          setUserProfile(data.user);
-          setRemainingQuota(data.remaining);
-          setIsUnlimited(data.isUnlimited);
-        }
-      })
-      .catch(() => {});
+    // 未登录兜底重定向
+    if (!authLoading && !userProfile) {
+      window.location.replace("/auth/sign-in?redirect=/dashboard");
+      return;
+    }
 
-    // 2. 获取最近生成的 4 个视频
+    // 获取最近生成的 4 个视频
     fetch("/api/videos")
       .then((res) => res.json())
       .then((data) => {
@@ -58,7 +53,7 @@ function DashboardOverview() {
       })
       .catch(() => {})
       .finally(() => setLoadingRecent(false));
-  }, []);
+  }, [authLoading, userProfile]);
 
   // 计算 Credits 消耗百分比
   const usagePercentage = userProfile && userProfile.monthlyUsageLimit > 0 && !isUnlimited
@@ -75,10 +70,10 @@ function DashboardOverview() {
             <span>Omni Studio Hub</span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-slate-100 tracking-tight">
-            Welcome back, {userProfile?.displayName || "Creator"}
+            {t.dashWelcome}, {userProfile?.displayName || (locale === "zh" ? "创作者" : "Creator")}
           </h1>
           <p className="mt-1.5 text-sm text-slate-500 dark:text-slate-400">
-            Manage your AI generation studios and creative video assets.
+            {t.dashSubtitle}
           </p>
         </div>
 
@@ -96,10 +91,10 @@ function DashboardOverview() {
             <div className="flex-1">
               <div className="flex items-center justify-between text-sm mb-1.5">
                 <span className="font-bold text-slate-800 dark:text-slate-200 capitalize">
-                  {userProfile.planType} Tier
+                  {userProfile.planType} {locale === "zh" ? "方案" : "Tier"}
                 </span>
                 <span className="font-mono font-bold text-slate-900 dark:text-slate-100">
-                  {isUnlimited ? "Unlimited" : `${remainingQuota} Credits Left`}
+                  {isUnlimited ? t.unlimited : `${remainingQuota} ${locale === "zh" ? "次剩余额度" : "Credits Left"}`}
                 </span>
               </div>
 
@@ -113,9 +108,9 @@ function DashboardOverview() {
               )}
 
               <div className="mt-2 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
-                <span>{userProfile.monthlyUsageCount} used this cycle</span>
+                <span>{locale === "zh" ? `当月已使用 ${userProfile.monthlyUsageCount} 次` : `${userProfile.monthlyUsageCount} used this cycle`}</span>
                 <Link href="/billing" className="text-[#1e3a8a] dark:text-[#93c5fd] font-semibold hover:underline">
-                  Upgrade Plan
+                  {t.upgrade}
                 </Link>
               </div>
             </div>
@@ -128,10 +123,10 @@ function DashboardOverview() {
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
             <Layers className="h-5 w-5 text-slate-400" />
-            <span>AI Creation Studios</span>
+            <span>{locale === "zh" ? "AI 创作矩阵" : "AI Creation Studios"}</span>
           </h2>
           <span className="text-xs text-slate-500 font-mono">
-            3 Specialized Engines
+            {locale === "zh" ? "3 大专用算力引擎" : "3 Specialized Engines"}
           </span>
         </div>
 
@@ -149,10 +144,10 @@ function DashboardOverview() {
               </div>
 
               <h3 className="text-base font-bold text-slate-900 dark:text-slate-100 mb-2">
-                Vocabulary Shorts Studio
+                {t.toolsVocabShorts}
               </h3>
               <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed mb-6">
-                Turn single vocabulary words into viral 9:16 vertical short videos for TikTok, Reels and Shorts with synchronized Remotion motions.
+                {t.toolsVocabDesc}
               </p>
             </div>
 
@@ -160,7 +155,7 @@ function DashboardOverview() {
               href="/tools/vocab-shorts"
               className="w-full inline-flex items-center justify-center gap-2 bg-[#1e3a8a] hover:bg-[#172554] dark:bg-[#1e40af] dark:hover:bg-[#1e3a8a] text-white py-2.5 rounded-lg font-semibold text-sm shadow-xs transition active:scale-95"
             >
-              <span>Launch Studio</span>
+              <span>{locale === "zh" ? "进入工作台" : "Launch Studio"}</span>
               <ArrowRight className="h-4 w-4" />
             </Link>
           </div>
@@ -173,15 +168,15 @@ function DashboardOverview() {
                   <Video className="h-6 w-6" />
                 </div>
                 <span className="px-2.5 py-1 rounded text-xs font-mono font-bold bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/30 uppercase tracking-wider">
-                  Active • 16:9 1080p
+                  {locale === "zh" ? "已激活 • 16:9 高清" : "Active • 16:9 1080p"}
                 </span>
               </div>
 
               <h3 className="text-base font-bold text-slate-900 dark:text-slate-100 mb-2">
-                IP Doodle Video Studio
+                {t.toolsIpExplainer}
               </h3>
               <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed mb-6">
-                AI Director choreographed hand-drawn explainer videos for patents, trademarks, copyright & commercial wars.
+                {t.toolsIpDesc}
               </p>
             </div>
 
@@ -189,7 +184,7 @@ function DashboardOverview() {
               href="/tools/ip-explainer"
               className="w-full inline-flex items-center justify-center gap-2 bg-[#1e3a8a] hover:bg-[#172554] dark:bg-[#1e40af] dark:hover:bg-[#1e3a8a] text-white py-2.5 rounded-lg font-semibold text-sm shadow-xs transition active:scale-95"
             >
-              <span>Launch Studio</span>
+              <span>{locale === "zh" ? "进入工作台" : "Launch Studio"}</span>
               <ArrowRight className="h-4 w-4" />
             </Link>
           </div>
@@ -202,15 +197,15 @@ function DashboardOverview() {
                   <Mic className="h-6 w-6" />
                 </div>
                 <span className="px-2.5 py-1 rounded text-xs font-mono font-bold bg-slate-100 dark:bg-slate-800 text-slate-400 uppercase tracking-wider">
-                  Preview
+                  {locale === "zh" ? "即将上线" : "Preview"}
                 </span>
               </div>
 
               <h3 className="text-base font-bold text-slate-900 dark:text-slate-100 mb-2">
-                Neural Voiceover & Audio
+                {t.toolsVoiceover}
               </h3>
               <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed mb-6">
-                Synthesize studio-grade multi-speaker audio with expressive emotions, micro-pauses and cross-lingual neural voices.
+                {t.toolsVoiceoverDesc}
               </p>
             </div>
 
@@ -218,7 +213,7 @@ function DashboardOverview() {
               href="/tools/voiceover"
               className="w-full inline-flex items-center justify-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-800 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700 py-2.5 rounded-lg font-semibold text-sm transition active:scale-95"
             >
-              <span>View Specs</span>
+              <span>{locale === "zh" ? "查看技术规范" : "View Specs"}</span>
               <ArrowRight className="h-4 w-4" />
             </Link>
           </div>
@@ -230,23 +225,23 @@ function DashboardOverview() {
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
             <Film className="h-5 w-5 text-slate-400" />
-            <span>Recent Creations</span>
+            <span>{t.dashRecentVideos}</span>
           </h2>
           <Link
             href="/library"
             className="inline-flex items-center gap-1.5 text-sm font-semibold text-slate-600 dark:text-slate-400 hover:text-[#1e3a8a] dark:hover:text-[#93c5fd] transition"
           >
-            <span>View All in Library</span>
+            <span>{t.dashViewAll}</span>
             <ArrowRight className="h-4 w-4" />
           </Link>
         </div>
 
         {loadingRecent ? (
-          <div className="p-8 text-center text-xs text-slate-400">Loading recent creations...</div>
+          <div className="p-8 text-center text-xs text-slate-400">{t.loading}</div>
         ) : recentVideos.length === 0 ? (
           <div className="p-8 rounded-lg border border-dashed border-slate-200 dark:border-slate-800 text-center bg-white/50 dark:bg-transparent">
             <p className="text-xs text-slate-500 dark:text-slate-400">
-              No videos generated yet. Launch Vocabulary Shorts to create your first video!
+              {t.dashNoVideos}
             </p>
           </div>
         ) : (

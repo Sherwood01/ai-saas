@@ -13,16 +13,21 @@ import {
   X, 
   ArrowRight, 
   FileVideo, 
-  ArrowLeft 
+  ArrowLeft,
+  Terminal,
+  ChevronDown,
+  ChevronUp
 } from "lucide-react";
 import Link from "next/link";
 import { VideoItem, UserProfile } from "@/lib/types";
+import { useLanguage } from "@/components/LanguageProvider";
 
 /**
  * 词汇短视频生成专用工作台 (Vocabulary Shorts Studio - Palantir Navy & Slate)
  * 提供从单个单词到 9:16 短视频 (TikTok/Reels/Shorts) 的端到端自动化生成。
  */
 function VocabShortsContent() {
+  const { t, locale } = useLanguage();
   const searchParams = useSearchParams();
   const initialWord = searchParams.get("word") || "";
 
@@ -35,8 +40,9 @@ function VocabShortsContent() {
   const [remainingQuota, setRemainingQuota] = useState<number>(0);
   const [isUnlimited, setIsUnlimited] = useState<boolean>(false);
 
-  // 当前正在跑的任务
+  // 当前正在跑的任务与日志展开控制
   const [activeTask, setActiveTask] = useState<VideoItem | null>(null);
+  const [showLogs, setShowLogs] = useState<boolean>(true);
 
   // 选中的播放视频 (原地直接点播刚生成的作品)
   const [selectedVideo, setSelectedVideo] = useState<VideoItem | null>(null);
@@ -60,8 +66,32 @@ function VocabShortsContent() {
     }
   };
 
+  /**
+   * 页面初始化：拉取用户状态，并尝试从本地恢复最近/正在进行的任务
+   */
   useEffect(() => {
     fetchUserStatus();
+
+    try {
+      const savedTaskId = localStorage.getItem("saas_active_task_vocab");
+      if (savedTaskId) {
+        fetch(`/api/status/${savedTaskId}`)
+          .then((r) => r.json())
+          .then((task) => {
+            if (task && !task.error && task.id) {
+              setActiveTask(task);
+              if (task.status === "running" || task.status === "queued") {
+                setLoading(true);
+              }
+            } else {
+              localStorage.removeItem("saas_active_task_vocab");
+            }
+          })
+          .catch(() => {
+            localStorage.removeItem("saas_active_task_vocab");
+          });
+      }
+    } catch (_) {}
   }, []);
 
   /**
@@ -133,6 +163,10 @@ function VocabShortsContent() {
       const data = await res.json();
       if (data.task) {
         setActiveTask(data.task);
+        try {
+          localStorage.setItem("saas_active_task_vocab", data.task.id);
+        } catch (_) {}
+
         if (typeof data.remainingQuota === "number") {
           setRemainingQuota(data.remainingQuota);
         }
@@ -158,15 +192,15 @@ function VocabShortsContent() {
               className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#1e3a8a] dark:text-[#93c5fd] hover:underline"
             >
               <ArrowLeft className="h-3.5 w-3.5" />
-              <span>Back to Dashboard</span>
+              <span>{locale === "zh" ? "返回工作台" : "Back to Dashboard"}</span>
             </Link>
           </div>
           <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-slate-100 tracking-tight flex items-center gap-2.5">
             <Film className="h-7 w-7 text-[#1e3a8a] dark:text-[#93c5fd]" />
-            <span>Vocabulary Shorts Studio</span>
+            <span>{t.toolsVocabShorts}</span>
           </h1>
           <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-            Generate 1080p vertical shorts with LLM pedagogy scripts, neural TTS and synchronized Remotion animations.
+            {t.toolsVocabDesc}
           </p>
         </div>
 
@@ -175,16 +209,16 @@ function VocabShortsContent() {
           <Link
             href="/library"
             className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-750 text-xs font-semibold transition shadow-xs active:scale-95"
-            title="Open Asset Library"
+            title={t.navLibrary}
           >
             <FileVideo className="h-4 w-4 text-[#1e3a8a] dark:text-[#93c5fd]" />
-            <span>Asset Library</span>
+            <span>{t.navLibrary}</span>
           </Link>
 
           <button
             type="button"
             onClick={fetchUserStatus}
-            className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-500 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+            className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-500 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:bg-slate-800 transition"
             title="Refresh balance"
           >
             <RefreshCw className="h-4 w-4" />
@@ -196,7 +230,7 @@ function VocabShortsContent() {
       <div className="p-6 sm:p-7 rounded-lg bg-white dark:bg-[#101828] border border-slate-200 dark:border-slate-800 shadow-xs mb-8">
         <form onSubmit={handleGenerate} className="flex flex-col gap-3">
           <label className="text-sm font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
-            Enter an English Word:
+            {t.genInputWordLabel}:
           </label>
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
             <div className="relative flex-1">
@@ -204,7 +238,7 @@ function VocabShortsContent() {
                 type="text"
                 value={word}
                 onChange={(e) => setWord(e.target.value)}
-                placeholder="e.g. serendipity, ephemeral, petrichor..."
+                placeholder={t.genInputWordPlaceholder}
                 disabled={loading}
                 className="w-full px-4 py-2.5 rounded-md bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 placeholder-slate-400 text-base font-medium focus:outline-none focus:border-[#1e3a8a] focus:ring-1 focus:ring-[#1e3a8a] transition"
               />
@@ -217,18 +251,18 @@ function VocabShortsContent() {
               {loading ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin" />
-                  <span>Processing...</span>
+                  <span>{t.genBtnGenerating}</span>
                 </>
               ) : (
                 <>
                   <Play className="h-4 w-4 fill-current" />
-                  <span>Generate Video</span>
+                  <span>{t.genBtnGenerate}</span>
                 </>
               )}
             </button>
           </div>
           <div className="mt-1 flex items-center gap-2 text-xs text-slate-400">
-            <span>💡 Tip: Try uncommon SAT/GRE vocabulary or idioms for maximum viewer retention.</span>
+            <span>💡 {locale === "zh" ? "提示: 输入具有视觉画面感或高阶考研/GRE高频词，生成效果最出彩。" : "Tip: Try uncommon SAT/GRE vocabulary or idioms for maximum viewer retention."}</span>
           </div>
         </form>
 
@@ -251,20 +285,23 @@ function VocabShortsContent() {
                   </div>
                   <div>
                     <h3 className="font-bold text-slate-900 dark:text-slate-100 capitalize text-base flex items-center gap-2">
-                      <span>Video Ready: &ldquo;{activeTask.word}&rdquo;</span>
+                      <span>{locale === "zh" ? `视频生成就绪: "${activeTask.word}"` : `Video Ready: "${activeTask.word}"`}</span>
                       <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 uppercase">
-                        Ready
+                        {locale === "zh" ? "完成" : "Ready"}
                       </span>
                     </h3>
                     <p className="text-xs text-slate-500 dark:text-slate-400">
-                      Rendered & synced into local SaaS storage.
+                      {locale === "zh" ? "已完成全自动逐帧合成，并安全流式转存至本地存储中心。" : "Rendered & synced into local SaaS storage."}
                     </p>
                   </div>
                 </div>
 
                 <button
                   type="button"
-                  onClick={() => setActiveTask(null)}
+                  onClick={() => {
+                    setActiveTask(null);
+                    try { localStorage.removeItem("saas_active_task_vocab"); } catch (_) {}
+                  }}
                   className="p-1 rounded text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition"
                   title="Dismiss notification"
                 >
@@ -280,7 +317,7 @@ function VocabShortsContent() {
                   className="flex items-center gap-1.5 bg-emerald-700 hover:bg-emerald-800 text-white px-4 py-2 rounded font-semibold text-xs transition shadow-xs active:scale-95"
                 >
                   <Play className="h-3.5 w-3.5 fill-white" />
-                  <span>Watch Video</span>
+                  <span>{t.genWatchVideo}</span>
                 </button>
 
                 <a
@@ -289,17 +326,49 @@ function VocabShortsContent() {
                   className="flex items-center gap-1.5 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 px-4 py-2 rounded font-semibold text-xs transition shadow-xs active:scale-95"
                 >
                   <Download className="h-3.5 w-3.5" />
-                  <span>Download MP4</span>
+                  <span>{t.genDownloadMp4}</span>
                 </a>
 
                 <Link
                   href="/library"
                   className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-700 dark:text-emerald-400 hover:underline ml-auto"
                 >
-                  <span>Open in Library</span>
+                  <span>{t.genOpenInLibrary}</span>
                   <ArrowRight className="h-3.5 w-3.5" />
                 </Link>
               </div>
+
+              {/* Live Console Output (完成态可折叠查看) */}
+              {activeTask.logs && activeTask.logs.length > 0 && (
+                <div className="mt-3 rounded-md bg-[#0a0f1d] border border-slate-800 p-3 overflow-hidden text-xs font-mono shadow-inner">
+                  <div 
+                    className="flex items-center justify-between cursor-pointer select-none pb-1.5 border-b border-slate-800 text-slate-400 hover:text-slate-200"
+                    onClick={() => setShowLogs(!showLogs)}
+                  >
+                    <div className="flex items-center gap-1.5 text-emerald-400 font-semibold">
+                      <Terminal className="h-3.5 w-3.5" />
+                      <span>{t.genConsoleTitle}</span>
+                    </div>
+                    <div className="flex items-center gap-1 text-[11px]">
+                      <span>{showLogs ? (locale === "zh" ? "收起日志" : "Collapse") : (locale === "zh" ? "展开日志" : "Expand")}</span>
+                      {showLogs ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+                    </div>
+                  </div>
+
+                  {showLogs && (
+                    <div className="mt-2 max-h-36 overflow-y-auto space-y-1 text-[11px] text-slate-300">
+                      {activeTask.logs.map((log, idx) => (
+                        <div key={idx} className="leading-relaxed flex items-start gap-1.5">
+                          <span className="text-slate-500 shrink-0">›</span>
+                          <span className={log.includes("[ERR") ? "text-rose-400" : log.includes("[SUCCESS") ? "text-emerald-400 font-bold" : "text-slate-300"}>
+                            {log}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           ) : (
             /* 任务进行中卡片 */
@@ -308,7 +377,7 @@ function VocabShortsContent() {
                 <div className="flex items-center gap-2">
                   <span className="h-2.5 w-2.5 rounded-full bg-[#1e3a8a] dark:bg-[#3b82f6] animate-pulse" />
                   <span className="font-semibold text-sm text-slate-900 dark:text-slate-100 capitalize">
-                    Generating video for: &ldquo;{activeTask.word}&rdquo;
+                    {t.genStatusGenerating} &ldquo;{activeTask.word}&rdquo;
                   </span>
                 </div>
                 <span className="text-sm font-mono font-bold text-slate-900 dark:text-slate-100">
@@ -324,9 +393,46 @@ function VocabShortsContent() {
                 />
               </div>
 
-              <p className="mt-2 text-[11px] text-slate-400">
-                Current stage: <span className="text-slate-700 dark:text-slate-300 font-medium">{activeTask.stage || "Rendering composition..."}</span>
+              <p className="mt-2 text-[11px] text-slate-500 dark:text-slate-400">
+                {t.genCurrentStage} <span className="text-slate-800 dark:text-slate-200 font-medium">{activeTask.stage || "Rendering composition..."}</span>
               </p>
+
+              {/* Live Console Output (任务运行中动态输出类似 server.js) */}
+              <div className="mt-3 rounded-md bg-[#0a0f1d] border border-slate-800 p-3 overflow-hidden text-xs font-mono shadow-inner">
+                <div 
+                  className="flex items-center justify-between cursor-pointer select-none pb-2 border-b border-slate-800 text-slate-400 hover:text-slate-200"
+                  onClick={() => setShowLogs(!showLogs)}
+                >
+                  <div className="flex items-center gap-1.5 text-emerald-400 font-semibold">
+                    <Terminal className="h-3.5 w-3.5" />
+                    <span>{t.genConsoleTitle}</span>
+                  </div>
+                  <div className="flex items-center gap-1 text-[11px]">
+                    <span>{showLogs ? (locale === "zh" ? "收起日志" : "Collapse") : (locale === "zh" ? "展开日志" : "Expand")}</span>
+                    {showLogs ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+                  </div>
+                </div>
+
+                {showLogs && (
+                  <div className="mt-2 max-h-44 overflow-y-auto space-y-1 text-[11px] text-slate-300">
+                    {activeTask.logs && activeTask.logs.length > 0 ? (
+                      activeTask.logs.map((log, idx) => (
+                        <div key={idx} className="leading-relaxed flex items-start gap-1.5">
+                          <span className="text-slate-500 shrink-0">›</span>
+                          <span className={log.includes("[ERR") ? "text-rose-400" : log.includes("[SUCCESS") ? "text-emerald-400 font-bold" : "text-slate-300"}>
+                            {log}
+                          </span>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="text-slate-500 italic py-1 flex items-center gap-2">
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                        <span>{locale === "zh" ? "正在启动底层算力管线并捕获实时输出..." : "Initializing worker pipeline and streaming live output..."}</span>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
           )
         )}
